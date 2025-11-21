@@ -1,0 +1,27 @@
+import pandas as pd
+
+data = [
+    ["scenario", "Input", "Directly copied from input", "Can be suggested by LLM", "Fixed scenario string (mild, moderate, harsh)"],
+    ["temperature", "Input", "From input CSV", "LLM can generate realistic temp based on scenario and month", "seasonal_temperature(): T_avg + T_amp * sin(2π/12*(month - phi)) + random noise"],
+    ["humidity", "Input", "From input CSV", "LLM can generate humidity based on temp and scenario", "seasonal_humidity(): RH_avg + RH_amp * sin(2π/12*(month - phi)+π) - 0.15*(T-T_avg) + random noise, clamped 5-95%"],
+    ["month", "Input", "From input CSV", "LLM could optionally suggest month", "Derived from date (start_date + i*30 days)"],
+    ["aging_month", "Input", "From input CSV", "Usually deterministic", "Incremental counter i from 0 to n_samples-1"],
+    ["year", "Input", "From input CSV", "LLM could optionally suggest year", "Derived from date (start_date + i*30 days)"],
+    ["date", "Input", "From input CSV", "LLM could optionally generate date", "start_date + i*30 days formatted as YYYY-MM-DD"],
+    ["thermal_cycles", "Input", "From input CSV", "LLM can estimate thermal cycles based on scenario and month", "seasonal_cycles(): cycles_base + cycles_amp * abs(sin(2π/12*(month - 6))) + random noise, rounded and >=0"],
+    ["spice_simulated", "Input", "From input CSV", "Usually fixed, LLM optional", "Default False"],
+    ["gain_spice", "Input", "From input CSV", "Usually fixed, LLM optional", "Default 10.0"],
+    ["ideal_voltage", "Calculated", "ideal_voltage = 0.01 * temperature", "Depends on temperature", "V_ideal = 0.01 * temperature"],
+    ["sensitivity_factor", "Calculated", "Computed via compute_sensitivity_factor() using aging_month and temperature", "Depends on aging_month and temperature", "1 - k_sensitivity_base * (aging_month/12)**(1/3) * Arrhenius(Ea_sensitivity, T) * random unit variation"],
+    ["offset_voltage", "Calculated", "Sum of settling + ionic + thermal + humidity drifts", "Depends on multiple inputs", "offset = settling_drift + ionic_drift + thermal_drift + humidity_drift, each computed with random variation"],
+    ["noise_flicker", "Calculated", "Component of noise_rms", "Depends on aging_month and temperature", "flicker = FLICKER_BASE * (T/T_ref) * (aging_month/12)^0.3 * random variation"],
+    ["noise_white", "Calculated", "Component of noise_rms", "Depends on aging_month and temperature", "white = WHITE_BASE * sqrt(T/T_ref) * (1+0.2*(aging_month/120)^0.25) * random variation"],
+    ["burst_probability", "Calculated", "Probability used to generate burst noise", "Depends on aging_month", "burst_prob = 0 if aging_month<=0 else 1-exp(-0.01*aging_month)"],
+    ["noise_rms", "Calculated", "RMS of noise components", "Depends on flicker, white, burst", "noise_rms = sqrt(flicker^2 + white^2 + burst^2)"],
+    ["output_voltage", "Calculated", "V_aged = ideal_voltage * sensitivity_factor + offset_voltage + noise_rms", "Depends on all previous inputs and calculations", "V_aged = ideal_voltage * sensitivity_factor + offset_voltage + noise_rms"],
+    ["voltage_error", "Calculated", "V_aged - ideal_voltage", "Depends on ideal_voltage and output_voltage", "voltage_error = output_voltage - ideal_voltage"]
+]
+
+df = pd.DataFrame(data, columns=["Column", "Input / Calculated", "Notes", "LLM Suggested Input", "Current Calculation Method"])
+
+df.to_csv("documentation.csv", index=False)
